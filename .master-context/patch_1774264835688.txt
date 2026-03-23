@@ -1,0 +1,331 @@
+<<<START_OF_DIFF>>>
+```java
+# Create: src/main/java/com/omnicraft/gui/TodoBookScreen.java
+<<<<<<< CONTENT
+package com.omnicraft.gui;
+
+import com.omnicraft.hud.TodoTask;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class TodoBookScreen extends Screen {
+    private static final ResourceLocation BOOK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/book.png");
+    private final String rawTitle;
+    private final String reqs;
+    private String displayTitle;
+    private final List<TodoTask> tasks = new ArrayList<>();
+
+    public TodoBookScreen(String title, String reqs) {
+        super(Component.literal(title));
+        this.rawTitle = title;
+        this.reqs = reqs;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        parseData();
+    }
+
+    private void parseData() {
+        try {
+            if (!rawTitle.contains(" ")) {
+                String lookupId = rawTitle.contains(":") ? rawTitle : "minecraft:" + rawTitle;
+                Item tItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(lookupId));
+                displayTitle = tItem != Items.AIR ? tItem.getDescription().getString() : rawTitle.replace("_", " ");
+            } else {
+                displayTitle = rawTitle;
+            }
+        } catch (Exception e) {
+            displayTitle = rawTitle.replace("_", " ");
+        }
+
+        tasks.clear();
+        String[] parts = reqs.split("[,\\n]+");
+        for (String p : parts) {
+            String cleanPart = p.trim();
+            if (cleanPart.isEmpty()) continue;
+            
+            String[] kv = cleanPart.split(":");
+            if (kv.length >= 2) {
+                try {
+                    int count = Integer.parseInt(kv[kv.length - 1].trim());
+                    String rawId = cleanPart.substring(0, cleanPart.lastIndexOf(':')).trim();
+                    
+                    if (!rawId.contains(":")) {
+                        if (rawId.startsWith("#")) {
+                            rawId = "#minecraft:" + rawId.substring(1);
+                        } else {
+                            rawId = "minecraft:" + rawId;
+                        }
+                    }
+
+                    boolean isTag = rawId.startsWith("#");
+                    String dName;
+                    
+                    if (isTag) {
+                        String path = rawId.substring(rawId.indexOf(':') + 1);
+                        dName = "Nhóm " + path.replace("_", " ");
+                    } else {
+                        Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(rawId));
+                        dName = item != Items.AIR ? item.getDescription().getString() : rawId;
+                    }
+
+                    tasks.add(new TodoTask(rawId, isTag, dName, count));
+                } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    private void updateCurrentCounts(Inventory inv) {
+        for (TodoTask task : tasks) {
+            task.currentCount = 0;
+        }
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                for (TodoTask task : tasks) {
+                    if (task.isTag) {
+                        try {
+                            String tagId = task.itemId.substring(1);
+                            TagKey<Item> tagKey = TagKey.create(Registries.ITEM, ResourceLocation.parse(tagId));
+                            if (stack.is(tagKey)) {
+                                task.currentCount += stack.getCount();
+                            }
+                        } catch (Exception ignored) {}
+                    } else {
+                        if (task.itemId.equals(itemId)) {
+                            task.currentCount += stack.getCount();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        
+        int x = (this.width - 192) / 2;
+        int y = (this.height - 192) / 2;
+        
+        guiGraphics.blit(BOOK_TEXTURE, x, y, 0, 0, 192, 192, 256, 256);
+
+        if (Minecraft.getInstance().player != null) {
+            updateCurrentCounts(Minecraft.getInstance().player.getInventory());
+        }
+
+        guiGraphics.drawString(this.font, "§l" + displayTitle + "§r", x + 20, y + 20, 0x000000, false);
+
+        int taskY = y + 40;
+        for (TodoTask task : tasks) {
+            String text = "- " + task.displayName + ": " + task.currentCount + " / " + task.requiredCount;
+            int color = (task.currentCount >= task.requiredCount) ? 0x008800 : 0x000000;
+            guiGraphics.drawString(this.font, text, x + 20, taskY, color, false);
+            taskY += 12;
+        }
+
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+}
+>>>>>>> END
+```
+
+```java
+# Create: src/main/java/com/omnicraft/network/BookInteractHandler.java
+<<<<<<< CONTENT
+package com.omnicraft.network;
+
+import com.omnicraft.gui.TodoBookScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+
+@EventBusSubscriber(modid = "omnicraft", value = Dist.CLIENT)
+public class BookInteractHandler {
+
+    @SubscribeEvent
+    public static void onRightClick(PlayerInteractEvent.RightClickItem event) {
+        ItemStack stack = event.getItemStack();
+        if (stack.has(DataComponents.CUSTOM_DATA)) {
+            CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+            CompoundTag tag = data.copyTag();
+            if (tag.contains("omnicraft_title")) {
+                if (event.getLevel().isClientSide()) {
+                    String title = tag.getString("omnicraft_title");
+                    String reqs = tag.getString("omnicraft_reqs");
+                    Minecraft.getInstance().setScreen(new TodoBookScreen(title, reqs));
+                }
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
+            }
+        }
+    }
+}
+>>>>>>> END
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/ToolHandler.java
+<<<<<<< SEARCH
+                } else if ("set_todo_hud".equals(toolName)) {
+                    Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
+                    Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
+                    if (itemMatcher.find() && reqMatcher.find()) {
+                        toolResult = com.omnicraft.hud.TodoHud.setTasks(itemMatcher.group(1).trim(), reqMatcher.group(1).trim());
+                    } else {
+                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>. Vui lòng kiểm tra lại cú pháp XML.";
+                    }
+                } else {
+=======
+                } else if ("set_todo_hud".equals(toolName)) {
+                    Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
+                    Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
+                    if (itemMatcher.find() && reqMatcher.find()) {
+                        String title = itemMatcher.group(1).trim();
+                        String reqs = reqMatcher.group(1).trim();
+
+                        if (Minecraft.getInstance().hasSingleplayerServer()) {
+                            Minecraft.getInstance().getSingleplayerServer().execute(() -> {
+                                net.minecraft.server.level.ServerPlayer sPlayer = Minecraft.getInstance().getSingleplayerServer().getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+                                if (sPlayer != null) {
+                                    ItemStack book = new ItemStack(net.minecraft.world.item.Items.KNOWLEDGE_BOOK);
+                                    book.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("§6Tiến trình: " + title));
+                                    
+                                    net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+                                    tag.putString("omnicraft_title", title);
+                                    tag.putString("omnicraft_reqs", reqs);
+                                    book.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+                                    
+                                    sPlayer.getInventory().add(book);
+                                }
+                            });
+                            toolResult = "Đã đưa sách tiến trình vào túi đồ của người chơi.";
+                        } else {
+                            Minecraft.getInstance().execute(() -> {
+                                Minecraft.getInstance().setScreen(new com.omnicraft.gui.TodoBookScreen(title, reqs));
+                            });
+                            toolResult = "Đã hiển thị sách tiến trình cho người chơi trên màn hình.";
+                        }
+                    } else {
+                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>. Vui lòng kiểm tra lại cú pháp XML.";
+                    }
+                } else {
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/command/ClientCommandHandler.java
+<<<<<<< SEARCH
+                    .then(Commands.literal("delete")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                            .executes(context -> {
+                                String id = StringArgumentType.getString(context, "id");
+                                if (com.omnicraft.session.SessionManager.deleteSession(id)) {
+                                    sendMsg("§a[OmniCraft] Đã xóa phiên: " + id);
+                                    if (com.omnicraft.session.SessionManager.getCurrentSession() != null && com.omnicraft.session.SessionManager.getCurrentSession().id.equals(id)) {
+                                        com.omnicraft.session.SessionManager.init(); 
+                                    }
+                                } else {
+                                    sendMsg("§c[OmniCraft] Xóa thất bại hoặc không tìm thấy ID: " + id);
+                                }
+                                return 1;
+                            })
+                        )
+                    )
+                )
+                .then(Commands.literal("hud")
+                    .then(Commands.literal("clear")
+                        .executes(context -> {
+                            com.omnicraft.hud.TodoHud.clear();
+                            sendMsg("§a[OmniCraft] Đã ẩn HUD To-do list.");
+                            return 1;
+                        })
+                    )
+                    .then(Commands.literal("show")
+                        .executes(context -> {
+                            com.omnicraft.hud.TodoHud.show();
+                            sendMsg("§a[OmniCraft] Đã hiển thị HUD To-do list (nếu có dữ liệu).");
+                            return 1;
+                        })
+                    )
+                )
+        );
+    }
+=======
+                    .then(Commands.literal("delete")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                            .executes(context -> {
+                                String id = StringArgumentType.getString(context, "id");
+                                if (com.omnicraft.session.SessionManager.deleteSession(id)) {
+                                    sendMsg("§a[OmniCraft] Đã xóa phiên: " + id);
+                                    if (com.omnicraft.session.SessionManager.getCurrentSession() != null && com.omnicraft.session.SessionManager.getCurrentSession().id.equals(id)) {
+                                        com.omnicraft.session.SessionManager.init(); 
+                                    }
+                                } else {
+                                    sendMsg("§c[OmniCraft] Xóa thất bại hoặc không tìm thấy ID: " + id);
+                                }
+                                return 1;
+                            })
+                        )
+                    )
+                )
+        );
+    }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/AiProcessor.java
+<<<<<<< SEARCH
+    private static final String SYSTEM_PROMPT = "Bạn là OmniCraft AI, trợ lý Minecraft. Bạn BẮT BUỘC dùng các công cụ dưới đây bằng thẻ XML khi cần thiết:\n" +
+            "1. Lấy túi đồ: <call_tool name=\"get_inventory\"></call_tool>\n" +
+            "2. Tra công thức: <call_tool name=\"get_recipe\"><item>minecraft:tên_vật_phẩm</item></call_tool>\n" +
+            "3. Bật UI theo dõi: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ</item><req>minecraft:tên_vật_phẩm:số_lượng</req></call_tool>\n" +
+            "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4. Nếu yêu cầu nhóm vật liệu chung như bất kỳ loại gỗ nào, hãy dùng thẻ TAG bắt đầu bằng '#', ví dụ: #minecraft:planks:4, #minecraft:logs:2. Phân cách bằng dấu phẩy nếu có nhiều món).\n" +
+            "KHÔNG được bịa rằng đã bật HUD nếu chưa xuất thẻ XML. Nếu xuất XML, CHỈ in XML, tuyệt đối không giải thích thêm cho đến khi có <tool_result>. Luôn nói tiếng Việt.";
+=======
+    private static final String SYSTEM_PROMPT = "Bạn là OmniCraft AI, trợ lý Minecraft. Bạn BẮT BUỘC dùng các công cụ dưới đây bằng thẻ XML khi cần thiết:\n" +
+            "1. Lấy túi đồ: <call_tool name=\"get_inventory\"></call_tool>\n" +
+            "2. Tra công thức: <call_tool name=\"get_recipe\"><item>minecraft:tên_vật_phẩm</item></call_tool>\n" +
+            "3. Bật UI theo dõi: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ</item><req>minecraft:tên_vật_phẩm:số_lượng</req></call_tool>\n" +
+            "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4. Nếu yêu cầu nhóm vật liệu chung như bất kỳ loại gỗ nào, hãy dùng thẻ TAG bắt đầu bằng '#', ví dụ: #minecraft:planks:4, #minecraft:logs:2. Phân cách bằng dấu phẩy nếu có nhiều món).\n" +
+            "Tool set_todo_hud sẽ đưa cho người chơi 1 cuốn Sách Nhiệm Vụ để họ tự theo dõi. Hãy thông báo điều này cho họ. Nếu xuất XML, CHỈ in XML, tuyệt đối không giải thích thêm cho đến khi có <tool_result>. Luôn nói tiếng Việt.";
+>>>>>>> REPLACE
+```
+
+```bash
+# Delete: src/main/java/com/omnicraft/hud/TodoHud.java
+```
+
+```bash
+# Terminal: ./gradlew classes
+```
+<<<END_OF_DIFF>>>

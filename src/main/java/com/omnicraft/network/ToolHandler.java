@@ -46,7 +46,31 @@ public class ToolHandler {
                     Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
                     Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
                     if (itemMatcher.find() && reqMatcher.find()) {
-                        toolResult = com.omnicraft.hud.TodoHud.setTasks(itemMatcher.group(1).trim(), reqMatcher.group(1).trim());
+                        String title = itemMatcher.group(1).trim();
+                        String reqs = reqMatcher.group(1).trim();
+
+                        if (Minecraft.getInstance().hasSingleplayerServer()) {
+                            Minecraft.getInstance().getSingleplayerServer().execute(() -> {
+                                net.minecraft.server.level.ServerPlayer sPlayer = Minecraft.getInstance().getSingleplayerServer().getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+                                if (sPlayer != null) {
+                                    ItemStack book = new ItemStack(net.minecraft.world.item.Items.KNOWLEDGE_BOOK);
+                                    book.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("§6Tiến trình: " + title));
+
+                                    net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+                                    tag.putString("omnicraft_title", title);
+                                    tag.putString("omnicraft_reqs", reqs);
+                                    book.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+
+                                    sPlayer.getInventory().add(book);
+                                }
+                            });
+                            toolResult = "Đã đưa sách tiến trình vào túi đồ của người chơi.";
+                        } else {
+                            Minecraft.getInstance().execute(() -> {
+                                Minecraft.getInstance().setScreen(new com.omnicraft.gui.TodoBookScreen(title, reqs));
+                            });
+                            toolResult = "Đã hiển thị sách tiến trình cho người chơi trên màn hình.";
+                        }
                     } else {
                         toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>. Vui lòng kiểm tra lại cú pháp XML.";
                     }

@@ -111,22 +111,6 @@ public class ClientCommandHandler {
                         )
                     )
                 )
-                .then(Commands.literal("hud")
-                    .then(Commands.literal("clear")
-                        .executes(context -> {
-                            com.omnicraft.hud.TodoHud.clear();
-                            sendMsg("§a[OmniCraft] Đã ẩn HUD To-do list.");
-                            return 1;
-                        })
-                    )
-                    .then(Commands.literal("show")
-                        .executes(context -> {
-                            com.omnicraft.hud.TodoHud.show();
-                            sendMsg("§a[OmniCraft] Đã hiển thị HUD To-do list (nếu có dữ liệu).");
-                            return 1;
-                        })
-                    )
-                )
         );
     }
 

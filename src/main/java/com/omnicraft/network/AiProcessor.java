@@ -25,7 +25,7 @@ public class AiProcessor {
             "2. Tra công thức: <call_tool name=\"get_recipe\"><item>minecraft:tên_vật_phẩm</item></call_tool>\n" +
             "3. Bật UI theo dõi: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ</item><req>minecraft:tên_vật_phẩm:số_lượng</req></call_tool>\n" +
             "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4. Nếu yêu cầu nhóm vật liệu chung như bất kỳ loại gỗ nào, hãy dùng thẻ TAG bắt đầu bằng '#', ví dụ: #minecraft:planks:4, #minecraft:logs:2. Phân cách bằng dấu phẩy nếu có nhiều món).\n" +
-            "KHÔNG được bịa rằng đã bật HUD nếu chưa xuất thẻ XML. Nếu xuất XML, CHỈ in XML, tuyệt đối không giải thích thêm cho đến khi có <tool_result>. Luôn nói tiếng Việt.";
+            "Tool set_todo_hud sẽ đưa cho người chơi 1 cuốn Sách Nhiệm Vụ để họ tự theo dõi. Hãy thông báo điều này cho họ. Nếu xuất XML, CHỈ in XML, tuyệt đối không giải thích thêm cho đến khi có <tool_result>. Luôn nói tiếng Việt.";
 
     public static void sendToAI(String userInput) {
         if (userInput != null) {

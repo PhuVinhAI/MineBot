@@ -1,41 +1,52 @@
-package com.omnicraft.hud;
+package com.omnicraft.gui;
 
+import com.omnicraft.hud.TodoTask;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.tags.TagKey;
-import net.minecraft.core.registries.Registries;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@EventBusSubscriber(modid = "omnicraft", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-public class TodoHud {
-    public static final ResourceLocation TODO_HUD = ResourceLocation.fromNamespaceAndPath("omnicraft", "todo_hud");
+public class TodoBookScreen extends Screen {
+    private static final ResourceLocation BOOK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/book.png");
+    private final String rawTitle;
+    private final String reqs;
+    private String displayTitle;
+    private final List<TodoTask> tasks = new ArrayList<>();
 
-    private static String currentTitle = "";
-    private static final List<TodoTask> tasks = new ArrayList<>();
-    private static boolean active = false;
+    public TodoBookScreen(String title, String reqs) {
+        super(Component.literal(title));
+        this.rawTitle = title;
+        this.reqs = reqs;
+    }
 
-    public static String setTasks(String title, String reqs) {
+    @Override
+    protected void init() {
+        super.init();
+        parseData();
+    }
+
+    private void parseData() {
         try {
-            if (!title.contains(" ")) {
-                String lookupId = title.contains(":") ? title : "minecraft:" + title;
+            if (!rawTitle.contains(" ")) {
+                String lookupId = rawTitle.contains(":") ? rawTitle : "minecraft:" + rawTitle;
                 Item tItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(lookupId));
-                currentTitle = tItem != Items.AIR ? tItem.getDescription().getString() : title.replace("_", " ");
+                displayTitle = tItem != Items.AIR ? tItem.getDescription().getString() : rawTitle.replace("_", " ");
             } else {
-                currentTitle = title;
+                displayTitle = rawTitle;
             }
         } catch (Exception e) {
-            currentTitle = title.replace("_", " ");
+            displayTitle = rawTitle.replace("_", " ");
         }
 
         tasks.clear();
@@ -73,30 +84,9 @@ public class TodoHud {
                 } catch (Exception ignored) {}
             }
         }
-        active = !tasks.isEmpty();
-        if (active) {
-            return "HUD To-do list đã được cập nhật với " + tasks.size() + " mục.";
-        } else {
-            return "Lỗi Parser: Yêu cầu của bạn (" + reqs + ") sai định dạng. Hãy dùng dạng ID:Count (VD: minecraft:oak_planks:4)";
-        }
     }
 
-    public static void show() {
-        if (!tasks.isEmpty()) {
-            active = true;
-        }
-    }
-
-    public static void clear() {
-        active = false;
-        tasks.clear();
-    }
-
-    public static boolean isActive() {
-        return active;
-    }
-
-    public static void updateCurrentCounts(Inventory inv) {
+    private void updateCurrentCounts(Inventory inv) {
         for (TodoTask task : tasks) {
             task.currentCount = 0;
         }
@@ -123,25 +113,34 @@ public class TodoHud {
         }
     }
 
-    @SubscribeEvent
-    public static void registerGuiLayers(RegisterGuiLayersEvent event) {
-        event.registerAboveAll(TODO_HUD, (guiGraphics, partialTick) -> {
-            if (!active || Minecraft.getInstance().player == null) return;
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
+        int x = (this.width - 192) / 2;
+        int y = (this.height - 192) / 2;
+
+        guiGraphics.blit(BOOK_TEXTURE, x, y, 0, 0, 192, 192, 256, 256);
+
+        if (Minecraft.getInstance().player != null) {
             updateCurrentCounts(Minecraft.getInstance().player.getInventory());
+        }
 
-            int screenWidth = guiGraphics.guiWidth();
-            int y = 20;
+        guiGraphics.drawString(this.font, "§l" + displayTitle + "§r", x + 20, y + 20, 0x000000, false);
 
-            guiGraphics.drawString(Minecraft.getInstance().font, "§l[Mục tiêu: " + currentTitle + "]§r", screenWidth - 150, y, 0xFFDD00);
-            y += 12;
+        int taskY = y + 40;
+        for (TodoTask task : tasks) {
+            String text = "- " + task.displayName + ": " + task.currentCount + " / " + task.requiredCount;
+            int color = (task.currentCount >= task.requiredCount) ? 0x008800 : 0x000000;
+            guiGraphics.drawString(this.font, text, x + 20, taskY, color, false);
+            taskY += 12;
+        }
 
-            for (TodoTask task : tasks) {
-                String text = task.displayName + ": " + task.currentCount + " / " + task.requiredCount;
-                int color = (task.currentCount >= task.requiredCount) ? 0x55FF55 : 0xFFFFFF;
-                guiGraphics.drawString(Minecraft.getInstance().font, text, screenWidth - 150, y, color);
-                y += 12;
-            }
-        });
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 }
