@@ -24,8 +24,8 @@ public class BookInteractHandler {
             if (tag.contains("omnicraft_title")) {
                 if (event.getLevel().isClientSide()) {
                     String title = tag.getString("omnicraft_title");
-                    String reqs = tag.getString("omnicraft_reqs");
-                    Minecraft.getInstance().setScreen(new TodoBookScreen(title, reqs));
+                    net.minecraft.nbt.ListTag goalsTag = tag.getList("omnicraft_goals", 10);
+                    Minecraft.getInstance().setScreen(new TodoBookScreen(title, goalsTag));
                 }
                 event.setCanceled(true);
                 event.setCancellationResult(InteractionResult.SUCCESS);

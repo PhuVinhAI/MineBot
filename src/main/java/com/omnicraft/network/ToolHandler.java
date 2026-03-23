@@ -43,36 +43,48 @@ public class ToolHandler {
                         toolResult = "Lỗi: Thiếu thẻ <item>.";
                     }
                 } else if ("set_todo_hud".equals(toolName)) {
-                    Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
-                    Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
-                    if (itemMatcher.find() && reqMatcher.find()) {
-                        String title = itemMatcher.group(1).trim();
-                        String reqs = reqMatcher.group(1).trim();
+                    Matcher titleMatcher = Pattern.compile("<title>(.*?)</title>", Pattern.DOTALL).matcher(innerXml);
+                    Matcher goalMatcher = Pattern.compile("<goal name=\"([^\"]+)\">(.*?)</goal>", Pattern.DOTALL).matcher(innerXml);
 
-                        if (Minecraft.getInstance().hasSingleplayerServer()) {
-                            Minecraft.getInstance().getSingleplayerServer().execute(() -> {
-                                net.minecraft.server.level.ServerPlayer sPlayer = Minecraft.getInstance().getSingleplayerServer().getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
-                                if (sPlayer != null) {
-                                    ItemStack book = new ItemStack(net.minecraft.world.item.Items.KNOWLEDGE_BOOK);
-                                    book.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("§6Tiến trình: " + title));
+                    if (titleMatcher.find()) {
+                        String title = titleMatcher.group(1).trim();
+                        net.minecraft.nbt.ListTag goalList = new net.minecraft.nbt.ListTag();
 
-                                    net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
-                                    tag.putString("omnicraft_title", title);
-                                    tag.putString("omnicraft_reqs", reqs);
-                                    book.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+                        while (goalMatcher.find()) {
+                            net.minecraft.nbt.CompoundTag gTag = new net.minecraft.nbt.CompoundTag();
+                            gTag.putString("name", goalMatcher.group(1).trim());
+                            gTag.putString("reqs", goalMatcher.group(2).trim());
+                            goalList.add(gTag);
+                        }
 
-                                    sPlayer.getInventory().add(book);
-                                }
-                            });
-                            toolResult = "Đã đưa sách tiến trình vào túi đồ của người chơi.";
+                        if (goalList.isEmpty()) {
+                            toolResult = "Lỗi: Bạn chưa cung cấp bất kỳ thẻ <goal> nào. Hãy làm theo đúng cú pháp hướng dẫn.";
                         } else {
-                            Minecraft.getInstance().execute(() -> {
-                                Minecraft.getInstance().setScreen(new com.omnicraft.gui.TodoBookScreen(title, reqs));
-                            });
-                            toolResult = "Đã hiển thị sách tiến trình cho người chơi trên màn hình.";
+                            if (Minecraft.getInstance().hasSingleplayerServer()) {
+                                Minecraft.getInstance().getSingleplayerServer().execute(() -> {
+                                    net.minecraft.server.level.ServerPlayer sPlayer = Minecraft.getInstance().getSingleplayerServer().getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+                                    if (sPlayer != null) {
+                                        ItemStack book = new ItemStack(net.minecraft.world.item.Items.KNOWLEDGE_BOOK);
+                                        book.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("§6Tiến trình: " + title));
+
+                                        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+                                        tag.putString("omnicraft_title", title);
+                                        tag.put("omnicraft_goals", goalList);
+                                        book.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+
+                                        sPlayer.getInventory().add(book);
+                                    }
+                                });
+                                toolResult = "Đã đưa sách tiến trình vào túi đồ của người chơi.";
+                            } else {
+                                Minecraft.getInstance().execute(() -> {
+                                    Minecraft.getInstance().setScreen(new com.omnicraft.gui.TodoBookScreen(title, goalList));
+                                });
+                                toolResult = "Đã hiển thị sách tiến trình cho người chơi trên màn hình.";
+                            }
                         }
                     } else {
-                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>. Vui lòng kiểm tra lại cú pháp XML.";
+                        toolResult = "Lỗi: Thiếu thẻ <title>. Vui lòng kiểm tra lại cú pháp XML.";
                     }
                 } else {
                     toolResult = "Lỗi: Không tìm thấy tool có tên " + toolName;
