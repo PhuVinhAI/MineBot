@@ -103,6 +103,12 @@ public class TodoBookScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // Tắt hiệu ứng mờ (blur) phong cảnh mặc định của Minecraft 1.21.1
+        guiGraphics.fill(0, 0, this.width, this.height, 0x88000000);
+    }
+
+    @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
@@ -133,10 +139,11 @@ public class TodoBookScreen extends Screen {
             int color = done ? 0x55FF55 : 0xAAAAAA;
             String prefix = done ? "✔ " : "☐ ";
 
-            guiGraphics.drawString(this.font, prefix + task.displayName, x + 20, taskY, color, false);
+            // Bật đổ bóng (Shadow) thành true để chữ đậm, nổi khối và sắc nét
+            guiGraphics.drawString(this.font, prefix + task.displayName, x + 20, taskY, color, true);
 
             int statusWidth = this.font.width(status);
-            guiGraphics.drawString(this.font, status, x + panelWidth - 20 - statusWidth, taskY, color, false);
+            guiGraphics.drawString(this.font, status, x + panelWidth - 20 - statusWidth, taskY, color, true);
 
             taskY += 20;
         }
