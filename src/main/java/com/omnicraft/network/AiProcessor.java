@@ -20,11 +20,12 @@ public class AiProcessor {
     private static final HttpClient client = HttpClient.newHttpClient();
     private static final Gson GSON = new Gson();
 
-    private static final String SYSTEM_PROMPT = "Bạn là OmniCraft AI, trợ lý Minecraft. Bạn có thể sử dụng các công cụ sau bằng cách xuất ra thẻ XML:\n" +
-            "1. <call_tool name=\"get_inventory\"></call_tool>: Lấy túi đồ hiện tại.\n" +
-            "2. <call_tool name=\"get_recipe\"><item>id_vật_phẩm</item></call_tool>: Lấy công thức.\n" +
-            "3. <call_tool name=\"set_todo_hud\"><item>tên</item><req>id:số_lượng</req></call_tool>: Bật UI theo dõi.\n" +
-            "Nếu bạn gọi tool, CHỈ in ra thẻ XML, không giải thích gì thêm cho đến khi nhận được <tool_result>. Hãy luôn dùng tiếng Việt.";
+    private static final String SYSTEM_PROMPT = "Bạn là OmniCraft AI, trợ lý Minecraft. Bạn BẮT BUỘC dùng các công cụ dưới đây bằng thẻ XML khi cần thiết:\n" +
+            "1. Lấy túi đồ: <call_tool name=\"get_inventory\"></call_tool>\n" +
+            "2. Tra công thức: <call_tool name=\"get_recipe\"><item>minecraft:tên_vật_phẩm</item></call_tool>\n" +
+            "3. Bật UI theo dõi: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ</item><req>minecraft:tên_vật_phẩm:số_lượng</req></call_tool>\n" +
+            "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4. Nếu yêu cầu nhóm vật liệu chung như bất kỳ loại gỗ nào, hãy dùng thẻ TAG bắt đầu bằng '#', ví dụ: #minecraft:planks:4, #minecraft:logs:2. Phân cách bằng dấu phẩy nếu có nhiều món).\n" +
+            "KHÔNG được bịa rằng đã bật HUD nếu chưa xuất thẻ XML. Nếu xuất XML, CHỈ in XML, tuyệt đối không giải thích thêm cho đến khi có <tool_result>. Luôn nói tiếng Việt.";
 
     public static void sendToAI(String userInput) {
         if (userInput != null) {
@@ -91,7 +92,12 @@ public class AiProcessor {
         } else {
             SessionManager.addMessage("assistant", response);
             if (Minecraft.getInstance().player != null) {
-                Minecraft.getInstance().player.displayClientMessage(Component.literal("§e[OmniCraft]: §f" + response), false);
+                String[] lines = response.split("\n");
+                for (String line : lines) {
+                    if (!line.trim().isEmpty()) {
+                        Minecraft.getInstance().player.displayClientMessage(Component.literal("§e[OmniCraft]: §f" + line.trim().replace("**", "")), false);
+                    }
+                }
             }
         }
     }

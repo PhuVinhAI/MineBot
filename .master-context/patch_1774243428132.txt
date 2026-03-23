@@ -1,0 +1,183 @@
+<<<START_OF_DIFF>>>
+```java
+# File: src/main/java/com/omnicraft/network/AiProcessor.java
+<<<<<<< SEARCH
+    private static final String SYSTEM_PROMPT = "Bạn là OmniCraft AI, trợ lý Minecraft. Bạn có thể sử dụng các công cụ sau bằng cách xuất ra thẻ XML:\n" +
+            "1. <call_tool name=\"get_inventory\"></call_tool>: Lấy túi đồ hiện tại.\n" +
+            "2. <call_tool name=\"get_recipe\"><item>id_vật_phẩm</item></call_tool>: Lấy công thức.\n" +
+            "3. <call_tool name=\"set_todo_hud\"><item>tên</item><req>id:số_lượng</req></call_tool>: Bật UI theo dõi.\n" +
+            "Nếu bạn gọi tool, CHỈ in ra thẻ XML, không giải thích gì thêm cho đến khi nhận được <tool_result>. Hãy luôn dùng tiếng Việt.";
+
+    public static void sendToAI(String userInput) {
+=======
+    private static final String SYSTEM_PROMPT = "Bạn là OmniCraft AI, trợ lý Minecraft. Bạn BẮT BUỘC dùng các công cụ dưới đây bằng thẻ XML khi cần thiết:\n" +
+            "1. Lấy túi đồ: <call_tool name=\"get_inventory\"></call_tool>\n" +
+            "2. Tra công thức: <call_tool name=\"get_recipe\"><item>minecraft:tên_vật_phẩm</item></call_tool>\n" +
+            "3. Bật UI theo dõi: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ</item><req>minecraft:tên_vật_phẩm:số_lượng</req></call_tool>\n" +
+            "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4, phân cách bằng dấu phẩy nếu có nhiều món).\n" +
+            "KHÔNG được bịa rằng đã bật HUD nếu chưa xuất thẻ XML. Nếu xuất XML, CHỈ in XML, tuyệt đối không giải thích thêm cho đến khi có <tool_result>. Luôn nói tiếng Việt.";
+
+    public static void sendToAI(String userInput) {
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/AiProcessor.java
+<<<<<<< SEARCH
+    private static void handleAiResponse(String response) {
+        if (response.contains("<call_tool")) {
+            ToolHandler.processToolCall(response);
+        } else {
+            SessionManager.addMessage("assistant", response);
+            if (Minecraft.getInstance().player != null) {
+                Minecraft.getInstance().player.displayClientMessage(Component.literal("§e[OmniCraft]: §f" + response), false);
+            }
+        }
+    }
+=======
+    private static void handleAiResponse(String response) {
+        if (response.contains("<call_tool")) {
+            ToolHandler.processToolCall(response);
+        } else {
+            SessionManager.addMessage("assistant", response);
+            if (Minecraft.getInstance().player != null) {
+                String[] lines = response.split("\n");
+                for (String line : lines) {
+                    if (!line.trim().isEmpty()) {
+                        Minecraft.getInstance().player.displayClientMessage(Component.literal("§e[OmniCraft]: §f" + line.trim().replace("**", "")), false);
+                    }
+                }
+            }
+        }
+    }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/hud/TodoHud.java
+<<<<<<< SEARCH
+    public static void setTasks(String title, String reqs) {
+        currentTitle = title;
+        tasks.clear();
+        
+        String[] parts = reqs.split("[,\\n]+");
+        for (String p : parts) {
+            String[] kv = p.trim().split(":");
+            if (kv.length >= 2) {
+                try {
+                    String id = kv.length >= 3 ? kv[0] + ":" + kv[1] : kv[0];
+                    int count = Integer.parseInt(kv[kv.length - 1].trim());
+                    tasks.add(new TodoTask(id, count));
+                } catch (Exception ignored) {}
+            }
+        }
+        active = !tasks.isEmpty();
+    }
+
+    public static void clear() {
+=======
+    public static String setTasks(String title, String reqs) {
+        currentTitle = title;
+        tasks.clear();
+        
+        String[] parts = reqs.split("[,\\n]+");
+        for (String p : parts) {
+            String cleanPart = p.trim();
+            if (cleanPart.isEmpty()) continue;
+            
+            String[] kv = cleanPart.split(":");
+            if (kv.length >= 2) {
+                try {
+                    int count = Integer.parseInt(kv[kv.length - 1].trim());
+                    String id = cleanPart.substring(0, cleanPart.lastIndexOf(':')).trim();
+                    if (!id.contains(":")) {
+                        id = "minecraft:" + id; 
+                    }
+                    tasks.add(new TodoTask(id, count));
+                } catch (Exception ignored) {}
+            }
+        }
+        active = !tasks.isEmpty();
+        if (active) {
+            return "HUD To-do list đã được cập nhật với " + tasks.size() + " mục.";
+        } else {
+            return "Lỗi Parser: Yêu cầu của bạn (" + reqs + ") sai định dạng. Hãy dùng dạng ID:Count (VD: minecraft:oak_planks:4)";
+        }
+    }
+
+    public static void show() {
+        if (!tasks.isEmpty()) {
+            active = true;
+        }
+    }
+
+    public static void clear() {
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/ToolHandler.java
+<<<<<<< SEARCH
+                } else if ("set_todo_hud".equals(toolName)) {
+                    Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
+                    Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
+                    if (itemMatcher.find() && reqMatcher.find()) {
+                        com.omnicraft.hud.TodoHud.setTasks(itemMatcher.group(1).trim(), reqMatcher.group(1).trim());
+                        toolResult = "HUD đã được cập nhật thành công.";
+                    } else {
+                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>.";
+                    }
+                } else {
+=======
+                } else if ("set_todo_hud".equals(toolName)) {
+                    Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
+                    Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
+                    if (itemMatcher.find() && reqMatcher.find()) {
+                        toolResult = com.omnicraft.hud.TodoHud.setTasks(itemMatcher.group(1).trim(), reqMatcher.group(1).trim());
+                    } else {
+                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>. Vui lòng kiểm tra lại cú pháp XML.";
+                    }
+                } else {
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/command/ClientCommandHandler.java
+<<<<<<< SEARCH
+                .then(Commands.literal("hud")
+                    .then(Commands.literal("clear")
+                        .executes(context -> {
+                            com.omnicraft.hud.TodoHud.clear();
+                            sendMsg("§a[OmniCraft] Đã ẩn HUD To-do list.");
+                            return 1;
+                        })
+                    )
+                )
+        );
+    }
+=======
+                .then(Commands.literal("hud")
+                    .then(Commands.literal("clear")
+                        .executes(context -> {
+                            com.omnicraft.hud.TodoHud.clear();
+                            sendMsg("§a[OmniCraft] Đã ẩn HUD To-do list.");
+                            return 1;
+                        })
+                    )
+                    .then(Commands.literal("show")
+                        .executes(context -> {
+                            com.omnicraft.hud.TodoHud.show();
+                            sendMsg("§a[OmniCraft] Đã hiển thị HUD To-do list (nếu có dữ liệu).");
+                            return 1;
+                        })
+                    )
+                )
+        );
+    }
+>>>>>>> REPLACE
+```
+
+```bash
+# Terminal: ./gradlew classes
+```
+<<<END_OF_DIFF>>>

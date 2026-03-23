@@ -119,6 +119,13 @@ public class ClientCommandHandler {
                             return 1;
                         })
                     )
+                    .then(Commands.literal("show")
+                        .executes(context -> {
+                            com.omnicraft.hud.TodoHud.show();
+                            sendMsg("§a[OmniCraft] Đã hiển thị HUD To-do list (nếu có dữ liệu).");
+                            return 1;
+                        })
+                    )
                 )
         );
     }

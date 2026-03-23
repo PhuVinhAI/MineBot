@@ -4,7 +4,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.tags.TagKey;
+import net.minecraft.core.registries.Registries;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -21,22 +25,66 @@ public class TodoHud {
     private static final List<TodoTask> tasks = new ArrayList<>();
     private static boolean active = false;
 
-    public static void setTasks(String title, String reqs) {
-        currentTitle = title;
-        tasks.clear();
+    public static String setTasks(String title, String reqs) {
+        try {
+            if (!title.contains(" ")) {
+                String lookupId = title.contains(":") ? title : "minecraft:" + title;
+                Item tItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(lookupId));
+                currentTitle = tItem != Items.AIR ? tItem.getDescription().getString() : title.replace("_", " ");
+            } else {
+                currentTitle = title;
+            }
+        } catch (Exception e) {
+            currentTitle = title.replace("_", " ");
+        }
 
+        tasks.clear();
         String[] parts = reqs.split("[,\\n]+");
         for (String p : parts) {
-            String[] kv = p.trim().split(":");
+            String cleanPart = p.trim();
+            if (cleanPart.isEmpty()) continue;
+
+            String[] kv = cleanPart.split(":");
             if (kv.length >= 2) {
                 try {
-                    String id = kv.length >= 3 ? kv[0] + ":" + kv[1] : kv[0];
                     int count = Integer.parseInt(kv[kv.length - 1].trim());
-                    tasks.add(new TodoTask(id, count));
+                    String rawId = cleanPart.substring(0, cleanPart.lastIndexOf(':')).trim();
+
+                    if (!rawId.contains(":")) {
+                        if (rawId.startsWith("#")) {
+                            rawId = "#minecraft:" + rawId.substring(1);
+                        } else {
+                            rawId = "minecraft:" + rawId;
+                        }
+                    }
+
+                    boolean isTag = rawId.startsWith("#");
+                    String dName;
+
+                    if (isTag) {
+                        String path = rawId.substring(rawId.indexOf(':') + 1);
+                        dName = "Nhóm " + path.replace("_", " ");
+                    } else {
+                        Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(rawId));
+                        dName = item != Items.AIR ? item.getDescription().getString() : rawId;
+                    }
+
+                    tasks.add(new TodoTask(rawId, isTag, dName, count));
                 } catch (Exception ignored) {}
             }
         }
         active = !tasks.isEmpty();
+        if (active) {
+            return "HUD To-do list đã được cập nhật với " + tasks.size() + " mục.";
+        } else {
+            return "Lỗi Parser: Yêu cầu của bạn (" + reqs + ") sai định dạng. Hãy dùng dạng ID:Count (VD: minecraft:oak_planks:4)";
+        }
+    }
+
+    public static void show() {
+        if (!tasks.isEmpty()) {
+            active = true;
+        }
     }
 
     public static void clear() {
@@ -55,10 +103,20 @@ public class TodoHud {
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack stack = inv.getItem(i);
             if (!stack.isEmpty()) {
-                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
                 for (TodoTask task : tasks) {
-                    if (task.itemId.equals(id)) {
-                        task.currentCount += stack.getCount();
+                    if (task.isTag) {
+                        try {
+                            String tagId = task.itemId.substring(1);
+                            TagKey<Item> tagKey = TagKey.create(Registries.ITEM, ResourceLocation.parse(tagId));
+                            if (stack.is(tagKey)) {
+                                task.currentCount += stack.getCount();
+                            }
+                        } catch (Exception ignored) {}
+                    } else {
+                        if (task.itemId.equals(itemId)) {
+                            task.currentCount += stack.getCount();
+                        }
                     }
                 }
             }
@@ -79,9 +137,7 @@ public class TodoHud {
             y += 12;
 
             for (TodoTask task : tasks) {
-                String[] idParts = task.itemId.split(":");
-                String shortName = idParts.length > 1 ? idParts[1] : task.itemId;
-                String text = shortName + ": " + task.currentCount + " / " + task.requiredCount;
+                String text = task.displayName + ": " + task.currentCount + " / " + task.requiredCount;
                 int color = (task.currentCount >= task.requiredCount) ? 0x55FF55 : 0xFFFFFF;
                 guiGraphics.drawString(Minecraft.getInstance().font, text, screenWidth - 150, y, color);
                 y += 12;

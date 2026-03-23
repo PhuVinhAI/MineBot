@@ -46,10 +46,9 @@ public class ToolHandler {
                     Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
                     Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
                     if (itemMatcher.find() && reqMatcher.find()) {
-                        com.omnicraft.hud.TodoHud.setTasks(itemMatcher.group(1).trim(), reqMatcher.group(1).trim());
-                        toolResult = "HUD đã được cập nhật thành công.";
+                        toolResult = com.omnicraft.hud.TodoHud.setTasks(itemMatcher.group(1).trim(), reqMatcher.group(1).trim());
                     } else {
-                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>.";
+                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>. Vui lòng kiểm tra lại cú pháp XML.";
                     }
                 } else {
                     toolResult = "Lỗi: Không tìm thấy tool có tên " + toolName;
@@ -96,7 +95,17 @@ public class ToolHandler {
                 StringBuilder sb = new StringBuilder("Công thức chế tạo (Recipe) cho ").append(itemId).append(":\n");
                 holder.value().getIngredients().forEach(ing -> {
                     if (!ing.isEmpty() && ing.getItems().length > 0) {
-                        sb.append("- ").append(BuiltInRegistries.ITEM.getKey(ing.getItems()[0].getItem()).toString()).append("\n");
+                        ItemStack[] items = ing.getItems();
+                        if (items.length > 4) {
+                            sb.append("- Nhóm nguyên liệu chung (hãy dùng tag bắt đầu bằng dấu #, ví dụ: #minecraft:planks, #minecraft:logs...)\n");
+                        } else {
+                            sb.append("- ");
+                            for (int i = 0; i < items.length; i++) {
+                                sb.append(BuiltInRegistries.ITEM.getKey(items[i].getItem()).toString());
+                                if (i < items.length - 1) sb.append(" HOẶC ");
+                            }
+                            sb.append("\n");
+                        }
                     }
                 });
                 return sb.toString();

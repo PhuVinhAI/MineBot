@@ -1,0 +1,233 @@
+<<<START_OF_DIFF>>>
+```java
+# File: src/main/java/com/omnicraft/hud/TodoTask.java
+<<<<<<< SEARCH
+    public String itemId;
+    public int requiredCount;
+    public int currentCount;
+
+    public TodoTask(String itemId, int requiredCount) {
+        this.itemId = itemId;
+        this.requiredCount = requiredCount;
+        this.currentCount = 0;
+    }
+=======
+    public String itemId;
+    public boolean isTag;
+    public String displayName;
+    public int requiredCount;
+    public int currentCount;
+
+    public TodoTask(String itemId, boolean isTag, String displayName, int requiredCount) {
+        this.itemId = itemId;
+        this.isTag = isTag;
+        this.displayName = displayName;
+        this.requiredCount = requiredCount;
+        this.currentCount = 0;
+    }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/hud/TodoHud.java
+<<<<<<< SEARCH
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+=======
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.tags.TagKey;
+import net.minecraft.core.registries.Registries;
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/hud/TodoHud.java
+<<<<<<< SEARCH
+    public static String setTasks(String title, String reqs) {
+        currentTitle = title;
+        tasks.clear();
+        
+        String[] parts = reqs.split("[,\\n]+");
+        for (String p : parts) {
+            String cleanPart = p.trim();
+            if (cleanPart.isEmpty()) continue;
+            
+            String[] kv = cleanPart.split(":");
+            if (kv.length >= 2) {
+                try {
+                    int count = Integer.parseInt(kv[kv.length - 1].trim());
+                    String id = cleanPart.substring(0, cleanPart.lastIndexOf(':')).trim();
+                    if (!id.contains(":")) {
+                        id = "minecraft:" + id; 
+                    }
+                    tasks.add(new TodoTask(id, count));
+                } catch (Exception ignored) {}
+            }
+        }
+=======
+    public static String setTasks(String title, String reqs) {
+        try {
+            if (!title.contains(" ")) {
+                String lookupId = title.contains(":") ? title : "minecraft:" + title;
+                Item tItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(lookupId));
+                currentTitle = tItem != Items.AIR ? tItem.getDescription().getString() : title.replace("_", " ");
+            } else {
+                currentTitle = title;
+            }
+        } catch (Exception e) {
+            currentTitle = title.replace("_", " ");
+        }
+
+        tasks.clear();
+        String[] parts = reqs.split("[,\\n]+");
+        for (String p : parts) {
+            String cleanPart = p.trim();
+            if (cleanPart.isEmpty()) continue;
+            
+            String[] kv = cleanPart.split(":");
+            if (kv.length >= 2) {
+                try {
+                    int count = Integer.parseInt(kv[kv.length - 1].trim());
+                    String rawId = cleanPart.substring(0, cleanPart.lastIndexOf(':')).trim();
+                    
+                    if (!rawId.contains(":")) {
+                        if (rawId.startsWith("#")) {
+                            rawId = "#minecraft:" + rawId.substring(1);
+                        } else {
+                            rawId = "minecraft:" + rawId;
+                        }
+                    }
+
+                    boolean isTag = rawId.startsWith("#");
+                    String dName;
+                    
+                    if (isTag) {
+                        String path = rawId.substring(rawId.indexOf(':') + 1);
+                        dName = "Nhóm " + path.replace("_", " ");
+                    } else {
+                        Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(rawId));
+                        dName = item != Items.AIR ? item.getDescription().getString() : rawId;
+                    }
+
+                    tasks.add(new TodoTask(rawId, isTag, dName, count));
+                } catch (Exception ignored) {}
+            }
+        }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/hud/TodoHud.java
+<<<<<<< SEARCH
+    public static void updateCurrentCounts(Inventory inv) {
+        for (TodoTask task : tasks) {
+            task.currentCount = 0;
+        }
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                for (TodoTask task : tasks) {
+                    if (task.itemId.equals(id)) {
+                        task.currentCount += stack.getCount();
+                    }
+                }
+            }
+        }
+    }
+=======
+    public static void updateCurrentCounts(Inventory inv) {
+        for (TodoTask task : tasks) {
+            task.currentCount = 0;
+        }
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                for (TodoTask task : tasks) {
+                    if (task.isTag) {
+                        try {
+                            String tagId = task.itemId.substring(1);
+                            TagKey<Item> tagKey = TagKey.create(Registries.ITEM, ResourceLocation.parse(tagId));
+                            if (stack.is(tagKey)) {
+                                task.currentCount += stack.getCount();
+                            }
+                        } catch (Exception ignored) {}
+                    } else {
+                        if (task.itemId.equals(itemId)) {
+                            task.currentCount += stack.getCount();
+                        }
+                    }
+                }
+            }
+        }
+    }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/hud/TodoHud.java
+<<<<<<< SEARCH
+            for (TodoTask task : tasks) {
+                String[] idParts = task.itemId.split(":");
+                String shortName = idParts.length > 1 ? idParts[1] : task.itemId;
+                String text = shortName + ": " + task.currentCount + " / " + task.requiredCount;
+                int color = (task.currentCount >= task.requiredCount) ? 0x55FF55 : 0xFFFFFF;
+                guiGraphics.drawString(Minecraft.getInstance().font, text, screenWidth - 150, y, color);
+                y += 12;
+            }
+=======
+            for (TodoTask task : tasks) {
+                String text = task.displayName + ": " + task.currentCount + " / " + task.requiredCount;
+                int color = (task.currentCount >= task.requiredCount) ? 0x55FF55 : 0xFFFFFF;
+                guiGraphics.drawString(Minecraft.getInstance().font, text, screenWidth - 150, y, color);
+                y += 12;
+            }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/ToolHandler.java
+<<<<<<< SEARCH
+                holder.value().getIngredients().forEach(ing -> {
+                    if (!ing.isEmpty() && ing.getItems().length > 0) {
+                        sb.append("- ").append(BuiltInRegistries.ITEM.getKey(ing.getItems()[0].getItem()).toString()).append("\n");
+                    }
+                });
+=======
+                holder.value().getIngredients().forEach(ing -> {
+                    if (!ing.isEmpty() && ing.getItems().length > 0) {
+                        ItemStack[] items = ing.getItems();
+                        if (items.length > 4) {
+                            sb.append("- Nhóm nguyên liệu chung (hãy dùng tag bắt đầu bằng dấu #, ví dụ: #minecraft:planks, #minecraft:logs...)\n");
+                        } else {
+                            sb.append("- ");
+                            for (int i = 0; i < items.length; i++) {
+                                sb.append(BuiltInRegistries.ITEM.getKey(items[i].getItem()).toString());
+                                if (i < items.length - 1) sb.append(" HOẶC ");
+                            }
+                            sb.append("\n");
+                        }
+                    }
+                });
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/AiProcessor.java
+<<<<<<< SEARCH
+            "3. Bật UI theo dõi: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ</item><req>minecraft:tên_vật_phẩm:số_lượng</req></call_tool>\n" +
+            "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4, phân cách bằng dấu phẩy nếu có nhiều món).\n" +
+=======
+            "3. Bật UI theo dõi: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ</item><req>minecraft:tên_vật_phẩm:số_lượng</req></call_tool>\n" +
+            "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4. Nếu yêu cầu nhóm vật liệu chung như bất kỳ loại gỗ nào, hãy dùng thẻ TAG bắt đầu bằng '#', ví dụ: #minecraft:planks:4, #minecraft:logs:2. Phân cách bằng dấu phẩy nếu có nhiều món).\n" +
+>>>>>>> REPLACE
+```
+
+```bash
+# Terminal: ./gradlew classes
+```
+<<<END_OF_DIFF>>>
