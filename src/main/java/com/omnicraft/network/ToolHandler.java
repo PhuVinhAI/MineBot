@@ -43,7 +43,14 @@ public class ToolHandler {
                         toolResult = "Lỗi: Thiếu thẻ <item>.";
                     }
                 } else if ("set_todo_hud".equals(toolName)) {
-                    toolResult = "HUD đã được cập nhật thành công (Chưa implement UI).";
+                    Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
+                    Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
+                    if (itemMatcher.find() && reqMatcher.find()) {
+                        com.omnicraft.hud.TodoHud.setTasks(itemMatcher.group(1).trim(), reqMatcher.group(1).trim());
+                        toolResult = "HUD đã được cập nhật thành công.";
+                    } else {
+                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>.";
+                    }
                 } else {
                     toolResult = "Lỗi: Không tìm thấy tool có tên " + toolName;
                 }

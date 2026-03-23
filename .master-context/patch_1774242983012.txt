@@ -1,0 +1,222 @@
+<<<START_OF_DIFF>>>
+```java
+# File: src/main/java/com/omnicraft/network/AiProcessor.java
+<<<<<<< SEARCH
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(ConfigManager.getConfig().baseUrl))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .header("Authorization", "Bearer " + ConfigManager.getConfig().apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(requestBody)))
+                    .build();
+=======
+            String endpoint = ConfigManager.getConfig().baseUrl;
+            if (!endpoint.endsWith("chat/completions")) {
+                if (!endpoint.endsWith("/")) endpoint += "/";
+                endpoint += "chat/completions";
+            }
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(endpoint))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .header("Authorization", "Bearer " + ConfigManager.getConfig().apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(requestBody)))
+                    .build();
+>>>>>>> REPLACE
+```
+
+```java
+# Create: src/main/java/com/omnicraft/hud/TodoTask.java
+<<<<<<< CONTENT
+package com.omnicraft.hud;
+
+public class TodoTask {
+    public String itemId;
+    public int requiredCount;
+    public int currentCount;
+
+    public TodoTask(String itemId, int requiredCount) {
+        this.itemId = itemId;
+        this.requiredCount = requiredCount;
+        this.currentCount = 0;
+    }
+}
+>>>>>>> END
+```
+
+```java
+# Create: src/main/java/com/omnicraft/hud/TodoHud.java
+<<<<<<< CONTENT
+package com.omnicraft.hud;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@EventBusSubscriber(modid = "omnicraft", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public class TodoHud {
+    public static final ResourceLocation TODO_HUD = ResourceLocation.fromNamespaceAndPath("omnicraft", "todo_hud");
+    
+    private static String currentTitle = "";
+    private static final List<TodoTask> tasks = new ArrayList<>();
+    private static boolean active = false;
+
+    public static void setTasks(String title, String reqs) {
+        currentTitle = title;
+        tasks.clear();
+        
+        String[] parts = reqs.split("[,\\n]+");
+        for (String p : parts) {
+            String[] kv = p.trim().split(":");
+            if (kv.length >= 2) {
+                try {
+                    String id = kv.length >= 3 ? kv[0] + ":" + kv[1] : kv[0];
+                    int count = Integer.parseInt(kv[kv.length - 1].trim());
+                    tasks.add(new TodoTask(id, count));
+                } catch (Exception ignored) {}
+            }
+        }
+        active = !tasks.isEmpty();
+    }
+
+    public static void clear() {
+        active = false;
+        tasks.clear();
+    }
+
+    public static boolean isActive() {
+        return active;
+    }
+
+    public static void updateCurrentCounts(Inventory inv) {
+        for (TodoTask task : tasks) {
+            task.currentCount = 0;
+        }
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                for (TodoTask task : tasks) {
+                    if (task.itemId.equals(id)) {
+                        task.currentCount += stack.getCount();
+                    }
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void registerGuiLayers(RegisterGuiLayersEvent event) {
+        event.registerAboveAll(TODO_HUD, (guiGraphics, partialTick) -> {
+            if (!active || Minecraft.getInstance().player == null) return;
+
+            updateCurrentCounts(Minecraft.getInstance().player.getInventory());
+
+            int screenWidth = guiGraphics.guiWidth();
+            int y = 20;
+
+            guiGraphics.drawString(Minecraft.getInstance().font, "§l[Mục tiêu: " + currentTitle + "]§r", screenWidth - 150, y, 0xFFDD00);
+            y += 12;
+
+            for (TodoTask task : tasks) {
+                String[] idParts = task.itemId.split(":");
+                String shortName = idParts.length > 1 ? idParts[1] : task.itemId;
+                String text = shortName + ": " + task.currentCount + " / " + task.requiredCount;
+                int color = (task.currentCount >= task.requiredCount) ? 0x55FF55 : 0xFFFFFF;
+                guiGraphics.drawString(Minecraft.getInstance().font, text, screenWidth - 150, y, color);
+                y += 12;
+            }
+        });
+    }
+}
+>>>>>>> END
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/ToolHandler.java
+<<<<<<< SEARCH
+                } else if ("set_todo_hud".equals(toolName)) {
+                    toolResult = "HUD đã được cập nhật thành công (Chưa implement UI).";
+                } else {
+=======
+                } else if ("set_todo_hud".equals(toolName)) {
+                    Matcher itemMatcher = ITEM_PATTERN.matcher(innerXml);
+                    Matcher reqMatcher = Pattern.compile("<req>(.*?)</req>", Pattern.DOTALL).matcher(innerXml);
+                    if (itemMatcher.find() && reqMatcher.find()) {
+                        com.omnicraft.hud.TodoHud.setTasks(itemMatcher.group(1).trim(), reqMatcher.group(1).trim());
+                        toolResult = "HUD đã được cập nhật thành công.";
+                    } else {
+                        toolResult = "Lỗi: Thiếu thẻ <item> hoặc <req>.";
+                    }
+                } else {
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/command/ClientCommandHandler.java
+<<<<<<< SEARCH
+                    .then(Commands.literal("delete")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                            .executes(context -> {
+                                String id = StringArgumentType.getString(context, "id");
+                                if (com.omnicraft.session.SessionManager.deleteSession(id)) {
+                                    sendMsg("§a[OmniCraft] Đã xóa phiên: " + id);
+                                    if (com.omnicraft.session.SessionManager.getCurrentSession() != null && com.omnicraft.session.SessionManager.getCurrentSession().id.equals(id)) {
+                                        com.omnicraft.session.SessionManager.init(); 
+                                    }
+                                } else {
+                                    sendMsg("§c[OmniCraft] Xóa thất bại hoặc không tìm thấy ID: " + id);
+                                }
+                                return 1;
+                            })
+                        )
+                    )
+                )
+        );
+    }
+=======
+                    .then(Commands.literal("delete")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                            .executes(context -> {
+                                String id = StringArgumentType.getString(context, "id");
+                                if (com.omnicraft.session.SessionManager.deleteSession(id)) {
+                                    sendMsg("§a[OmniCraft] Đã xóa phiên: " + id);
+                                    if (com.omnicraft.session.SessionManager.getCurrentSession() != null && com.omnicraft.session.SessionManager.getCurrentSession().id.equals(id)) {
+                                        com.omnicraft.session.SessionManager.init(); 
+                                    }
+                                } else {
+                                    sendMsg("§c[OmniCraft] Xóa thất bại hoặc không tìm thấy ID: " + id);
+                                }
+                                return 1;
+                            })
+                        )
+                    )
+                )
+                .then(Commands.literal("hud")
+                    .then(Commands.literal("clear")
+                        .executes(context -> {
+                            com.omnicraft.hud.TodoHud.clear();
+                            sendMsg("§a[OmniCraft] Đã ẩn HUD To-do list.");
+                            return 1;
+                        })
+                    )
+                )
+        );
+    }
+>>>>>>> REPLACE
+```
+
+```bash
+# Terminal: ./gradlew classes
+```
+<<<END_OF_DIFF>>>

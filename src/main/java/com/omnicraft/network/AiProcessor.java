@@ -61,21 +61,27 @@ public class AiProcessor {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(ConfigManager.getConfig().baseUrl))
                     .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
                     .header("Authorization", "Bearer " + ConfigManager.getConfig().apiKey)
                     .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(requestBody)))
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonObject jsonResponse = JsonParser.parseString(response.body()).getAsJsonObject();
+            String responseBody = response.body();
 
-            if (jsonResponse.has("choices")) {
-                return jsonResponse.getAsJsonArray("choices").get(0).getAsJsonObject().getAsJsonObject("message").get("content").getAsString();
-            } else {
-                return "Lỗi từ API: " + response.body();
+            try {
+                JsonObject jsonResponse = JsonParser.parseString(responseBody).getAsJsonObject();
+                if (jsonResponse.has("choices")) {
+                    return jsonResponse.getAsJsonArray("choices").get(0).getAsJsonObject().getAsJsonObject("message").get("content").getAsString();
+                } else {
+                    return "Lỗi từ API (HTTP " + response.statusCode() + "): " + responseBody;
+                }
+            } catch (Exception parseEx) {
+                return "Lỗi phản hồi API (HTTP " + response.statusCode() + "): " + responseBody;
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return "Lỗi nội bộ khi gọi API: " + e.getMessage();
+            return "Lỗi kết nối mạng: " + e.getMessage();
         }
     }
 
