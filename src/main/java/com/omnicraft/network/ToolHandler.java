@@ -93,19 +93,21 @@ public class ToolHandler {
         if (Minecraft.getInstance().player == null) return "Không tìm thấy Player.";
         Inventory inv = Minecraft.getInstance().player.getInventory();
         Map<String, Integer> counts = new HashMap<>();
+        Map<String, String> names = new HashMap<>();
 
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack stack = inv.getItem(i);
             if (!stack.isEmpty()) {
                 String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
                 counts.put(id, counts.getOrDefault(id, 0) + stack.getCount());
+                names.put(id, stack.getItem().getDescription().getString());
             }
         }
 
         if (counts.isEmpty()) return "Túi đồ hiện đang trống rỗng.";
 
         StringBuilder sb = new StringBuilder("Inventory:\n");
-        counts.forEach((k, v) -> sb.append("- ").append(k).append(": ").append(v).append("\n"));
+        counts.forEach((k, v) -> sb.append("- ").append(k).append(" [").append(names.get(k)).append("]: ").append(v).append("\n"));
         return sb.toString();
     }
 
@@ -125,7 +127,10 @@ public class ToolHandler {
                         } else {
                             sb.append("- ");
                             for (int i = 0; i < items.length; i++) {
-                                sb.append(BuiltInRegistries.ITEM.getKey(items[i].getItem()).toString());
+                                net.minecraft.world.item.Item item = items[i].getItem();
+                                String id = BuiltInRegistries.ITEM.getKey(item).toString();
+                                String name = item.getDescription().getString();
+                                sb.append(id).append(" [").append(name).append("]");
                                 if (i < items.length - 1) sb.append(" HOẶC ");
                             }
                             sb.append("\n");

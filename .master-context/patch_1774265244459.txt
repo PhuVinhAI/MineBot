@@ -1,0 +1,232 @@
+<<<START_OF_DIFF>>>
+```java
+# File: src/main/java/com/omnicraft/gui/TodoBookScreen.java
+<<<<<<< SEARCH
+public class TodoBookScreen extends Screen {
+    private static final ResourceLocation BOOK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/book.png");
+    private final String rawTitle;
+    private final String reqs;
+    private String displayTitle;
+    private final List<TodoTask> tasks = new ArrayList<>();
+
+    public TodoBookScreen(String title, String reqs) {
+=======
+public class TodoBookScreen extends Screen {
+    private final String rawTitle;
+    private final String reqs;
+    private String displayTitle;
+    private final List<TodoTask> tasks = new ArrayList<>();
+
+    public TodoBookScreen(String title, String reqs) {
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/gui/TodoBookScreen.java
+<<<<<<< SEARCH
+    private void parseData() {
+        try {
+            if (!rawTitle.contains(" ")) {
+                String lookupId = rawTitle.contains(":") ? rawTitle : "minecraft:" + rawTitle;
+                Item tItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(lookupId));
+                displayTitle = tItem != Items.AIR ? tItem.getDescription().getString() : rawTitle.replace("_", " ");
+            } else {
+                displayTitle = rawTitle;
+            }
+        } catch (Exception e) {
+            displayTitle = rawTitle.replace("_", " ");
+        }
+
+        tasks.clear();
+=======
+    private void parseData() {
+        displayTitle = rawTitle;
+
+        tasks.clear();
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/gui/TodoBookScreen.java
+<<<<<<< SEARCH
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        
+        int x = (this.width - 192) / 2;
+        int y = (this.height - 192) / 2;
+        
+        guiGraphics.blit(BOOK_TEXTURE, x, y, 0, 0, 192, 192, 256, 256);
+
+        if (Minecraft.getInstance().player != null) {
+            updateCurrentCounts(Minecraft.getInstance().player.getInventory());
+        }
+
+        guiGraphics.drawString(this.font, "§l" + displayTitle + "§r", x + 20, y + 20, 0x000000, false);
+
+        int taskY = y + 40;
+        for (TodoTask task : tasks) {
+            String text = "- " + task.displayName + ": " + task.currentCount + " / " + task.requiredCount;
+            int color = (task.currentCount >= task.requiredCount) ? 0x008800 : 0x000000;
+            guiGraphics.drawString(this.font, text, x + 20, taskY, color, false);
+            taskY += 12;
+        }
+
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+=======
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        
+        if (Minecraft.getInstance().player != null) {
+            updateCurrentCounts(Minecraft.getInstance().player.getInventory());
+        }
+
+        int panelWidth = 260;
+        int panelHeight = 60 + tasks.size() * 20;
+        int x = (this.width - panelWidth) / 2;
+        int y = (this.height - panelHeight) / 2;
+
+        // Vẽ viền và nền
+        guiGraphics.fill(x - 2, y - 2, x + panelWidth + 2, y + panelHeight + 2, 0xFFDDAA00); // Viền vàng
+        guiGraphics.fill(x, y, x + panelWidth, y + panelHeight, 0xFF181818); // Nền tối
+
+        // Tiêu đề
+        guiGraphics.drawCenteredString(this.font, "§l" + displayTitle + "§r", this.width / 2, y + 15, 0xFFFFFF);
+        
+        // Đường gạch ngang
+        guiGraphics.fill(x + 20, y + 30, x + panelWidth - 20, y + 31, 0xFF555555);
+
+        int taskY = y + 45;
+        for (TodoTask task : tasks) {
+            String status = task.currentCount + " / " + task.requiredCount;
+            boolean done = task.currentCount >= task.requiredCount;
+            
+            int color = done ? 0x55FF55 : 0xAAAAAA;
+            String prefix = done ? "✔ " : "☐ ";
+            
+            guiGraphics.drawString(this.font, prefix + task.displayName, x + 20, taskY, color, false);
+            
+            int statusWidth = this.font.width(status);
+            guiGraphics.drawString(this.font, status, x + panelWidth - 20 - statusWidth, taskY, color, false);
+            
+            taskY += 20;
+        }
+
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/ToolHandler.java
+<<<<<<< SEARCH
+    private static String getInventoryStr() {
+        if (Minecraft.getInstance().player == null) return "Không tìm thấy Player.";
+        Inventory inv = Minecraft.getInstance().player.getInventory();
+        Map<String, Integer> counts = new HashMap<>();
+
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                counts.put(id, counts.getOrDefault(id, 0) + stack.getCount());
+            }
+        }
+
+        if (counts.isEmpty()) return "Túi đồ hiện đang trống rỗng.";
+
+        StringBuilder sb = new StringBuilder("Inventory:\n");
+        counts.forEach((k, v) -> sb.append("- ").append(k).append(": ").append(v).append("\n"));
+        return sb.toString();
+    }
+=======
+    private static String getInventoryStr() {
+        if (Minecraft.getInstance().player == null) return "Không tìm thấy Player.";
+        Inventory inv = Minecraft.getInstance().player.getInventory();
+        Map<String, Integer> counts = new HashMap<>();
+        Map<String, String> names = new HashMap<>();
+
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                counts.put(id, counts.getOrDefault(id, 0) + stack.getCount());
+                names.put(id, stack.getItem().getDescription().getString());
+            }
+        }
+
+        if (counts.isEmpty()) return "Túi đồ hiện đang trống rỗng.";
+
+        StringBuilder sb = new StringBuilder("Inventory:\n");
+        counts.forEach((k, v) -> sb.append("- ").append(k).append(" [").append(names.get(k)).append("]: ").append(v).append("\n"));
+        return sb.toString();
+    }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/ToolHandler.java
+<<<<<<< SEARCH
+                holder.value().getIngredients().forEach(ing -> {
+                    if (!ing.isEmpty() && ing.getItems().length > 0) {
+                        ItemStack[] items = ing.getItems();
+                        if (items.length > 4) {
+                            sb.append("- Nhóm nguyên liệu chung (hãy dùng tag bắt đầu bằng dấu #, ví dụ: #minecraft:planks, #minecraft:logs...)\n");
+                        } else {
+                            sb.append("- ");
+                            for (int i = 0; i < items.length; i++) {
+                                sb.append(BuiltInRegistries.ITEM.getKey(items[i].getItem()).toString());
+                                if (i < items.length - 1) sb.append(" HOẶC ");
+                            }
+                            sb.append("\n");
+                        }
+                    }
+                });
+=======
+                holder.value().getIngredients().forEach(ing -> {
+                    if (!ing.isEmpty() && ing.getItems().length > 0) {
+                        ItemStack[] items = ing.getItems();
+                        if (items.length > 4) {
+                            sb.append("- Nhóm nguyên liệu chung (hãy dùng tag bắt đầu bằng dấu #, ví dụ: #minecraft:planks, #minecraft:logs...)\n");
+                        } else {
+                            sb.append("- ");
+                            for (int i = 0; i < items.length; i++) {
+                                net.minecraft.world.item.Item item = items[i].getItem();
+                                String id = BuiltInRegistries.ITEM.getKey(item).toString();
+                                String name = item.getDescription().getString();
+                                sb.append(id).append(" [").append(name).append("]");
+                                if (i < items.length - 1) sb.append(" HOẶC ");
+                            }
+                            sb.append("\n");
+                        }
+                    }
+                });
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/network/AiProcessor.java
+<<<<<<< SEARCH
+    private static final String SYSTEM_PROMPT = "Bạn là OmniCraft AI, trợ lý Minecraft. Bạn BẮT BUỘC dùng các công cụ dưới đây bằng thẻ XML khi cần thiết:\n" +
+            "1. Lấy túi đồ: <call_tool name=\"get_inventory\"></call_tool>\n" +
+            "2. Tra công thức: <call_tool name=\"get_recipe\"><item>minecraft:tên_vật_phẩm</item></call_tool>\n" +
+            "3. Bật UI theo dõi: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ</item><req>minecraft:tên_vật_phẩm:số_lượng</req></call_tool>\n" +
+            "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4. Nếu yêu cầu nhóm vật liệu chung như bất kỳ loại gỗ nào, hãy dùng thẻ TAG bắt đầu bằng '#', ví dụ: #minecraft:planks:4, #minecraft:logs:2. Phân cách bằng dấu phẩy nếu có nhiều món).\n" +
+            "Tool set_todo_hud sẽ đưa cho người chơi 1 cuốn Sách Nhiệm Vụ để họ tự theo dõi. Hãy thông báo điều này cho họ. Nếu xuất XML, CHỈ in XML, tuyệt đối không giải thích thêm cho đến khi có <tool_result>. Luôn nói tiếng Việt.";
+=======
+    private static final String SYSTEM_PROMPT = "Bạn là OmniCraft AI, trợ lý Minecraft. Bạn BẮT BUỘC dùng các công cụ dưới đây bằng thẻ XML khi cần thiết:\n" +
+            "1. Lấy túi đồ: <call_tool name=\"get_inventory\"></call_tool>\n" +
+            "2. Tra công thức: <call_tool name=\"get_recipe\"><item>minecraft:id_vật_phẩm</item></call_tool>\n" +
+            "3. Tạo Sách Tiến Trình: <call_tool name=\"set_todo_hud\"><item>Tên Nhiệm Vụ (Hiển thị đẹp)</item><req>minecraft:id_vật_phẩm:số_lượng</req></call_tool>\n" +
+            "(Lưu ý quan trọng: thẻ <req> phải đúng chuẩn định dạng ID:SốLượng, ví dụ: minecraft:oak_planks:4. Nếu yêu cầu nhóm vật liệu chung như gỗ, hãy dùng TAG bắt đầu bằng '#', ví dụ: #minecraft:planks:4. Phân cách nhiều món bằng dấu phẩy).\n" +
+            "Khi API trả về túi đồ hoặc công thức, tên thực tế đã dịch của vật phẩm trong game sẽ nằm trong dấu ngoặc vuông [...]. HÃY ƯU TIÊN SỬ DỤNG TÊN NÀY khi giao tiếp với người chơi để họ dễ hiểu.\n" +
+            "Tool set_todo_hud sẽ đưa cho người chơi 1 cuốn Sách Nhiệm Vụ (Custom UI) để họ tự theo dõi. Hãy thông báo điều này cho họ. Khi gọi tool, CHỈ in XML, tuyệt đối không giải thích thêm cho đến khi có <tool_result>. Luôn nói tiếng Việt.";
+>>>>>>> REPLACE
+```
+
+```bash
+# Terminal: ./gradlew classes
+```
+<<<END_OF_DIFF>>>

@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TodoBookScreen extends Screen {
-    private static final ResourceLocation BOOK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/book.png");
     private final String rawTitle;
     private final String reqs;
     private String displayTitle;
@@ -37,17 +36,7 @@ public class TodoBookScreen extends Screen {
     }
 
     private void parseData() {
-        try {
-            if (!rawTitle.contains(" ")) {
-                String lookupId = rawTitle.contains(":") ? rawTitle : "minecraft:" + rawTitle;
-                Item tItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(lookupId));
-                displayTitle = tItem != Items.AIR ? tItem.getDescription().getString() : rawTitle.replace("_", " ");
-            } else {
-                displayTitle = rawTitle;
-            }
-        } catch (Exception e) {
-            displayTitle = rawTitle.replace("_", " ");
-        }
+        displayTitle = rawTitle;
 
         tasks.clear();
         String[] parts = reqs.split("[,\\n]+");
@@ -117,23 +106,39 @@ public class TodoBookScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
-        int x = (this.width - 192) / 2;
-        int y = (this.height - 192) / 2;
-
-        guiGraphics.blit(BOOK_TEXTURE, x, y, 0, 0, 192, 192, 256, 256);
-
         if (Minecraft.getInstance().player != null) {
             updateCurrentCounts(Minecraft.getInstance().player.getInventory());
         }
 
-        guiGraphics.drawString(this.font, "§l" + displayTitle + "§r", x + 20, y + 20, 0x000000, false);
+        int panelWidth = 260;
+        int panelHeight = 60 + tasks.size() * 20;
+        int x = (this.width - panelWidth) / 2;
+        int y = (this.height - panelHeight) / 2;
 
-        int taskY = y + 40;
+        // Vẽ viền và nền
+        guiGraphics.fill(x - 2, y - 2, x + panelWidth + 2, y + panelHeight + 2, 0xFFDDAA00); // Viền vàng
+        guiGraphics.fill(x, y, x + panelWidth, y + panelHeight, 0xFF181818); // Nền tối
+
+        // Tiêu đề
+        guiGraphics.drawCenteredString(this.font, "§l" + displayTitle + "§r", this.width / 2, y + 15, 0xFFFFFF);
+
+        // Đường gạch ngang
+        guiGraphics.fill(x + 20, y + 30, x + panelWidth - 20, y + 31, 0xFF555555);
+
+        int taskY = y + 45;
         for (TodoTask task : tasks) {
-            String text = "- " + task.displayName + ": " + task.currentCount + " / " + task.requiredCount;
-            int color = (task.currentCount >= task.requiredCount) ? 0x008800 : 0x000000;
-            guiGraphics.drawString(this.font, text, x + 20, taskY, color, false);
-            taskY += 12;
+            String status = task.currentCount + " / " + task.requiredCount;
+            boolean done = task.currentCount >= task.requiredCount;
+
+            int color = done ? 0x55FF55 : 0xAAAAAA;
+            String prefix = done ? "✔ " : "☐ ";
+
+            guiGraphics.drawString(this.font, prefix + task.displayName, x + 20, taskY, color, false);
+
+            int statusWidth = this.font.width(status);
+            guiGraphics.drawString(this.font, status, x + panelWidth - 20 - statusWidth, taskY, color, false);
+
+            taskY += 20;
         }
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
