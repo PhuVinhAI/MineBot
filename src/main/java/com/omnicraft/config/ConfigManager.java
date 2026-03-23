@@ -40,7 +40,7 @@ public class ConfigManager {
 
     public static class SecretConfig {
         public String apiKey = "";
-        public String baseUrl = "https://api.openai.com/v1/";
-        public String model = "gpt-4o";
+        public String baseUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
+        public String model = "stepfun-ai/step-3.5-flash";
     }
 }
