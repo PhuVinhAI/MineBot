@@ -1,6 +1,7 @@
 package com.omnicraft;
 
 import com.omnicraft.config.ConfigManager;
+import com.omnicraft.session.SessionManager;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -16,5 +17,6 @@ public class OmniCraftAI {
 
     private void onClientSetup(final FMLClientSetupEvent event) {
         ConfigManager.init();
+        SessionManager.init();
     }
 }

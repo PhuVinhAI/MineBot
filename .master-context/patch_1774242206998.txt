@@ -1,0 +1,294 @@
+<<<START_OF_DIFF>>>
+```java
+# Create: src/main/java/com/omnicraft/session/ChatMessage.java
+<<<<<<< CONTENT
+package com.omnicraft.session;
+
+public class ChatMessage {
+    public String role;
+    public String content;
+
+    public ChatMessage(String role, String content) {
+        this.role = role;
+        this.content = content;
+    }
+}
+>>>>>>> END
+```
+
+```java
+# Create: src/main/java/com/omnicraft/session/ChatSession.java
+<<<<<<< CONTENT
+package com.omnicraft.session;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ChatSession {
+    public String id;
+    public String name;
+    public long lastModified;
+    public List<ChatMessage> messages = new ArrayList<>();
+}
+>>>>>>> END
+```
+
+```java
+# Create: src/main/java/com/omnicraft/session/SessionManager.java
+<<<<<<< CONTENT
+package com.omnicraft.session;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import net.neoforged.fml.loading.FMLPaths;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class SessionManager {
+    private static final Path SESSION_DIR = FMLPaths.GAMEDIR.get().resolve("omnicraft_ai/sessions");
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static ChatSession currentSession;
+
+    public static void init() {
+        try {
+            Files.createDirectories(SESSION_DIR);
+            List<ChatSession> sessions = getSessions();
+            if (sessions.isEmpty()) {
+                createNewSession("Default");
+            } else {
+                sessions.sort((a, b) -> Long.compare(b.lastModified, a.lastModified));
+                currentSession = sessions.get(0);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void createNewSession(String name) {
+        currentSession = new ChatSession();
+        currentSession.id = UUID.randomUUID().toString().substring(0, 8);
+        currentSession.name = name != null ? name : "Session-" + currentSession.id;
+        currentSession.lastModified = System.currentTimeMillis();
+        saveCurrentSession();
+    }
+
+    public static void saveCurrentSession() {
+        if (currentSession == null) return;
+        currentSession.lastModified = System.currentTimeMillis();
+        Path file = SESSION_DIR.resolve(currentSession.id + ".json");
+        try (Writer writer = Files.newBufferedWriter(file)) {
+            GSON.toJson(currentSession, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static List<ChatSession> getSessions() {
+        List<ChatSession> sessions = new ArrayList<>();
+        try {
+            if (!Files.exists(SESSION_DIR)) return sessions;
+            Files.list(SESSION_DIR)
+                .filter(p -> p.toString().endsWith(".json"))
+                .forEach(p -> {
+                    try (Reader reader = Files.newBufferedReader(p)) {
+                        ChatSession session = GSON.fromJson(reader, ChatSession.class);
+                        if (session != null && session.id != null) {
+                            sessions.add(session);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return sessions;
+    }
+
+    public static boolean switchSession(String id) {
+        Path file = SESSION_DIR.resolve(id + ".json");
+        if (Files.exists(file)) {
+            try (Reader reader = Files.newBufferedReader(file)) {
+                ChatSession session = GSON.fromJson(reader, ChatSession.class);
+                if (session != null) {
+                    currentSession = session;
+                    return true;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return false;
+    }
+
+    public static boolean deleteSession(String id) {
+        Path file = SESSION_DIR.resolve(id + ".json");
+        try {
+            return Files.deleteIfExists(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static void addMessage(String role, String content) {
+        if (currentSession == null) createNewSession("Auto-Recovery");
+        currentSession.messages.add(new ChatMessage(role, content));
+        saveCurrentSession();
+    }
+
+    public static ChatSession getCurrentSession() {
+        return currentSession;
+    }
+}
+>>>>>>> END
+```
+
+```java
+# File: src/main/java/com/omnicraft/command/ClientCommandHandler.java
+<<<<<<< SEARCH
+                        .then(Commands.literal("model")
+                            .then(Commands.argument("model_name", StringArgumentType.string())
+                                .executes(context -> {
+                                    String modelName = StringArgumentType.getString(context, "model_name");
+                                    ConfigManager.getConfig().model = modelName;
+                                    ConfigManager.save();
+                                    sendMsg("§a[OmniCraft] Đã lưu Model: " + modelName);
+                                    return 1;
+                                })
+                            )
+                        )
+                    )
+                )
+        );
+    }
+=======
+                        .then(Commands.literal("model")
+                            .then(Commands.argument("model_name", StringArgumentType.string())
+                                .executes(context -> {
+                                    String modelName = StringArgumentType.getString(context, "model_name");
+                                    ConfigManager.getConfig().model = modelName;
+                                    ConfigManager.save();
+                                    sendMsg("§a[OmniCraft] Đã lưu Model: " + modelName);
+                                    return 1;
+                                })
+                            )
+                        )
+                    )
+                )
+                .then(Commands.literal("session")
+                    .then(Commands.literal("new")
+                        .executes(context -> {
+                            com.omnicraft.session.SessionManager.createNewSession(null);
+                            sendMsg("§a[OmniCraft] Đã tạo phiên mới: " + com.omnicraft.session.SessionManager.getCurrentSession().name);
+                            return 1;
+                        })
+                        .then(Commands.argument("name", StringArgumentType.string())
+                            .executes(context -> {
+                                String name = StringArgumentType.getString(context, "name");
+                                com.omnicraft.session.SessionManager.createNewSession(name);
+                                sendMsg("§a[OmniCraft] Đã tạo phiên mới: " + name);
+                                return 1;
+                            })
+                        )
+                    )
+                    .then(Commands.literal("list")
+                        .executes(context -> {
+                            java.util.List<com.omnicraft.session.ChatSession> sessions = com.omnicraft.session.SessionManager.getSessions();
+                            sendMsg("§b[OmniCraft] Danh sách phiên chat:");
+                            for (com.omnicraft.session.ChatSession s : sessions) {
+                                String active = (com.omnicraft.session.SessionManager.getCurrentSession() != null && s.id.equals(com.omnicraft.session.SessionManager.getCurrentSession().id)) ? " §e(Đang chọn)" : "";
+                                sendMsg("§f- ID: §a" + s.id + " §f| Tên: " + s.name + active);
+                            }
+                            return 1;
+                        })
+                    )
+                    .then(Commands.literal("switch")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                            .executes(context -> {
+                                String id = StringArgumentType.getString(context, "id");
+                                if (com.omnicraft.session.SessionManager.switchSession(id)) {
+                                    sendMsg("§a[OmniCraft] Đã chuyển sang phiên: " + com.omnicraft.session.SessionManager.getCurrentSession().name);
+                                } else {
+                                    sendMsg("§c[OmniCraft] Không tìm thấy phiên với ID: " + id);
+                                }
+                                return 1;
+                            })
+                        )
+                    )
+                    .then(Commands.literal("delete")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                            .executes(context -> {
+                                String id = StringArgumentType.getString(context, "id");
+                                if (com.omnicraft.session.SessionManager.deleteSession(id)) {
+                                    sendMsg("§a[OmniCraft] Đã xóa phiên: " + id);
+                                    if (com.omnicraft.session.SessionManager.getCurrentSession() != null && com.omnicraft.session.SessionManager.getCurrentSession().id.equals(id)) {
+                                        com.omnicraft.session.SessionManager.init(); 
+                                    }
+                                } else {
+                                    sendMsg("§c[OmniCraft] Xóa thất bại hoặc không tìm thấy ID: " + id);
+                                }
+                                return 1;
+                            })
+                        )
+                    )
+                )
+        );
+    }
+>>>>>>> REPLACE
+```
+
+```java
+# File: src/main/java/com/omnicraft/OmniCraftAI.java
+<<<<<<< SEARCH
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+
+@Mod(value = OmniCraftAI.MOD_ID, dist = Dist.CLIENT)
+public class OmniCraftAI {
+    public static final String MOD_ID = "omnicraft";
+
+    public OmniCraftAI(IEventBus modBus) {
+        modBus.addListener(this::onClientSetup);
+    }
+
+    private void onClientSetup(final FMLClientSetupEvent event) {
+        ConfigManager.init();
+    }
+}
+=======
+import com.omnicraft.session.SessionManager;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+
+@Mod(value = OmniCraftAI.MOD_ID, dist = Dist.CLIENT)
+public class OmniCraftAI {
+    public static final String MOD_ID = "omnicraft";
+
+    public OmniCraftAI(IEventBus modBus) {
+        modBus.addListener(this::onClientSetup);
+    }
+
+    private void onClientSetup(final FMLClientSetupEvent event) {
+        ConfigManager.init();
+        SessionManager.init();
+    }
+}
+>>>>>>> REPLACE
+```
+
+```bash
+# Terminal: ./gradlew classes
+```
+<<<END_OF_DIFF>>>

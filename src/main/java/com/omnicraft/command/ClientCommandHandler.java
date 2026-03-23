@@ -54,6 +54,63 @@ public class ClientCommandHandler {
                         )
                     )
                 )
+                .then(Commands.literal("session")
+                    .then(Commands.literal("new")
+                        .executes(context -> {
+                            com.omnicraft.session.SessionManager.createNewSession(null);
+                            sendMsg("§a[OmniCraft] Đã tạo phiên mới: " + com.omnicraft.session.SessionManager.getCurrentSession().name);
+                            return 1;
+                        })
+                        .then(Commands.argument("name", StringArgumentType.string())
+                            .executes(context -> {
+                                String name = StringArgumentType.getString(context, "name");
+                                com.omnicraft.session.SessionManager.createNewSession(name);
+                                sendMsg("§a[OmniCraft] Đã tạo phiên mới: " + name);
+                                return 1;
+                            })
+                        )
+                    )
+                    .then(Commands.literal("list")
+                        .executes(context -> {
+                            java.util.List<com.omnicraft.session.ChatSession> sessions = com.omnicraft.session.SessionManager.getSessions();
+                            sendMsg("§b[OmniCraft] Danh sách phiên chat:");
+                            for (com.omnicraft.session.ChatSession s : sessions) {
+                                String active = (com.omnicraft.session.SessionManager.getCurrentSession() != null && s.id.equals(com.omnicraft.session.SessionManager.getCurrentSession().id)) ? " §e(Đang chọn)" : "";
+                                sendMsg("§f- ID: §a" + s.id + " §f| Tên: " + s.name + active);
+                            }
+                            return 1;
+                        })
+                    )
+                    .then(Commands.literal("switch")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                            .executes(context -> {
+                                String id = StringArgumentType.getString(context, "id");
+                                if (com.omnicraft.session.SessionManager.switchSession(id)) {
+                                    sendMsg("§a[OmniCraft] Đã chuyển sang phiên: " + com.omnicraft.session.SessionManager.getCurrentSession().name);
+                                } else {
+                                    sendMsg("§c[OmniCraft] Không tìm thấy phiên với ID: " + id);
+                                }
+                                return 1;
+                            })
+                        )
+                    )
+                    .then(Commands.literal("delete")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                            .executes(context -> {
+                                String id = StringArgumentType.getString(context, "id");
+                                if (com.omnicraft.session.SessionManager.deleteSession(id)) {
+                                    sendMsg("§a[OmniCraft] Đã xóa phiên: " + id);
+                                    if (com.omnicraft.session.SessionManager.getCurrentSession() != null && com.omnicraft.session.SessionManager.getCurrentSession().id.equals(id)) {
+                                        com.omnicraft.session.SessionManager.init();
+                                    }
+                                } else {
+                                    sendMsg("§c[OmniCraft] Xóa thất bại hoặc không tìm thấy ID: " + id);
+                                }
+                                return 1;
+                            })
+                        )
+                    )
+                )
         );
     }
 
